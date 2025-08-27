@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node.js与前端交互示例</title>
+<link href = "styles/hello.css"  rel="stylesheet" >
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Node.js 与前端交互示例</h1>
+            <p class="subtitle">使用Express框架实现RESTful API，前端通过Fetch API进行交互</p>
+        </header>
+        
+        <div class="card">
+            <h2><i>👤</i> 用户管理</h2>
+            
+            <div class="tabs">
+                <div class="tab active" data-tab="register">注册</div>
+                <div class="tab" data-tab="login">登录</div>
+            </div>
+            
+            <div class="tab-content active" id="register-tab">
+                <div class="form-group">
+                    <label for="name">用户名</label>
+                    <input type="text" id="name" placeholder="输入用户名">
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">邮箱</label>
+                    <input type="email" id="email" placeholder="输入邮箱">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" placeholder="输入密码">
+                </div>
+                
+                <button class="btn" id="register-btn">注册新用户</button>
+            </div>
+            
+            <div class="tab-content" id="login-tab">
+                <div class="form-group">
+                    <label for="login-email">邮箱</label>
+                    <input type="email" id="login-email" placeholder="输入邮箱">
+                </div>
+                
+                <div class="form-group">
+                    <label for="login-password">密码</label>
+                    <input type="password" id="login-password" placeholder="输入密码">
+                </div>
+                
+                <button class="btn btn-secondary" id="login-btn">登录</button>
+            </div>
+            
+            <div id="message"></div>
+        </div>
+        
+        <div class="card">
+            <h2><i>📊</i> 用户数据</h2>
+            
+            <div id="user-data">
+                <p>请先登录以查看用户数据</p>
+            </div>
+            
+            <div class="data-display" id="users-list"></div>
+            
+            <button class="btn btn-logout" id="logout-btn" style="display: none;">退出登录</button>
+            
+            <div class="api-info">
+                <h3>Node.js API 端点</h3>
+                <div class="api-endpoint">
+                    <strong>POST /api/register</strong> - 注册新用户<br>
+                    参数: { name, email, password }
+                </div>
+                <div class="api-endpoint">
+                    <strong>POST /api/login</strong> - 用户登录<br>
+                    参数: { email, password }
+                </div>
+                <div class="api-endpoint">
+                    <strong>GET /api/users</strong> - 获取所有用户数据 (需要登录)
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Node.js与前端交互示例 | 使用Express框架和Fetch API实现</p>
+        </footer>
+    </div>
+
+    <script src="scripts/localmemory.js"> </script>
+</body>
+</html>

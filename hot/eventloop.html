@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript 事件循环机制</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        header {
+            background: #4a69bd;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 20px;
+        }
+        .explanation {
+            flex: 1;
+            min-width: 300px;
+            padding: 20px;
+        }
+        .visualization {
+            flex: 2;
+            min-width: 400px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 {
+            color: #4a69bd;
+            margin: 20px 0 15px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+        p {
+            margin-bottom: 15px;
+        }
+        .code-container {
+            background: #2d3436;
+            color: #f5f7fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        .event-loop {
+            width: 100%;
+            height: 300px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+            border: 3px solid #4a69bd;
+        }
+        .stack, .web-apis, .callback-queue, .event-loop-line {
+            position: absolute;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            text-align: center;
+        }
+        .stack {
+            width: 150px;
+            height: 250px;
+            left: 20px;
+            top: 20px;
+            border: 2px solid #e17055;
+        }
+        .web-apis {
+            width: 150px;
+            height: 100px;
+            left: 200px;
+            top: 20px;
+            border: 2px solid #00b894;
+        }
+        .callback-queue {
+            width: 150px;
+            height: 80px;
+            left: 200px;
+            bottom: 20px;
+            border: 2px solid #6c5ce7;
+        }
+        .event-loop-line {
+            width: 50px;
+            height: 30px;
+            left: 380px;
+            top: 135px;
+            border: 2px solid #fd79a8;
+            animation: rotate 3s linear infinite;
+        }
+        .task {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            color: white;
+            font-size: 12px;
+        }
+        .microtask {
+            background: #e84393;
+        }
+        .macrotask {
+            background: #0984e3;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #4a69bd;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #3c58a8;
+        }
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .console {
+            width: 100%;
+            height: 150px;
+            background: #2d3436;
+            color: #00b894;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+        .legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .color-box {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>JavaScript 事件循环机制</h1>
+            <p class="subtitle">可视化演示 JavaScript 的并发模型如何工作</p>
+        </header>
+        
+        <div class="content">
+            <div class="explanation">
+                <h2>什么是事件循环？</h2>
+                <p>事件循环是 JavaScript 的并发模型的核心机制，它允许 JavaScript 在执行异步操作时不会阻塞主线程。</p>
+                
+                <h2>关键组成部分</h2>
+                <ul>
+                    <li><strong>调用栈 (Call Stack)</strong>：跟踪当前正在执行的函数</li>
+                    <li><strong>Web APIs</strong>：浏览器提供的异步功能（setTimeout, DOM事件, AJAX等）</li>
+                    <li><strong>回调队列 (Callback Queue)</strong>：存放已完成的异步操作的回调函数</li>
+                    <li><strong>微任务队列 (Microtask Queue)</strong>：存放Promise回调等微任务</li>
+                </ul>
+                
+                <h2>工作原理</h2>
+                <p>1. JavaScript 依次执行同步代码，将其添加到调用栈</p>
+                <p>2. 遇到异步操作时，将其交给 Web APIs 处理</p>
+                <p>3. Web APIs 完成后，将回调函数放入相应的队列</p>
+                <p>4. 当调用栈为空时，事件循环先处理微任务队列中的所有任务</p>
+                <p>5. 然后从回调队列中取出一个任务执行</p>
+                <p>6. 重复此过程，形成事件循环</p>
+                
+                <div class="code-container">
+                    <pre><code>console.log('开始');
+
+setTimeout(() => {
+  console.log('setTimeout 回调');
+}, 0);
+
+Promise.resolve().then(() => {
+  console.log('Promise 回调');
+});
+
+console.log('结束');
+
+// 输出顺序:
+// 开始
+// 结束
+// Promise 回调
+// setTimeout 回调</code></pre>
+                </div>
+            </div>
+            
+            <div class="visualization">
+                <h2>事件循环可视化</h2>
+                <div class="event-loop">
+                    <div class="stack">
+                        <h3>调用栈</h3>
+                        <div id="stack-tasks"></div>
+                    </div>
+                    <div class="web-apis">
+                        <h3>Web APIs</h3>
+                        <div id="webapi-tasks"></div>
+                    </div>
+                    <div class="callback-queue">
+                        <h3>回调队列</h3>
+                        <div id="callback-tasks"></div>
+                    </div>
+                    <div class="event-loop-line">事件循环</div>
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="color-box" style="background: #e17055;"></div>
+                        <span>调用栈</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background: #00b894;"></div>
+                        <span>Web APIs</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background: #6c5ce7;"></div>
+                        <span>回调队列</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background: #e84393;"></div>
+                        <span>微任务</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background: #0984e3;"></div>
+                        <span>宏任务</span>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button id="run-demo">运行演示</button>
+                    <button id="step">单步执行</button>
+                    <button id="reset">重置</button>
+                </div>
+                
+                <div class="console" id="console-output"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const runButton = document.getElementById('run-demo');
+            const stepButton = document.getElementById('step');
+            const resetButton = document.getElementById('reset');
+            const consoleOutput = document.getElementById('console-output');
+            
+            const stackTasks = document.getElementById('stack-tasks');
+            const webapiTasks = document.getElementById('webapi-tasks');
+            const callbackTasks = document.getElementById('callback-tasks');
+            
+            let demoSteps = [];
+            let currentStep = 0;
+            
+            // 初始化演示步骤
+            function initDemo() {
+                demoSteps = [
+                    // 步骤0: 初始状态
+                    function() {
+                        logToConsole("// 代码开始执行");
+                        addTask(stackTasks, "main()", "macrotask");
+                    },
+                    
+                    // 步骤1: console.log('开始')
+                    function() {
+                        logToConsole("console.log('开始');");
+                        addTask(stackTasks, "console.log('开始')", "macrotask");
+                    },
+                    
+                    // 步骤2: console.log 执行完成
+                    function() {
+                        logToConsole("开始");
+                        removeTask(stackTasks);
+                    },
+                    
+                    // 步骤3: 遇到 setTimeout
+                    function() {
+                        logToConsole("setTimeout(() => { ... }, 0);");
+                        addTask(stackTasks, "setTimeout", "macrotask");
+                    },
+                    
+                    // 步骤4: setTimeout 交给 Web API
+                    function() {
+                        removeTask(stackTasks);
+                        addTask(webapiTasks, "setTimeout", "macrotask");
+                    },
+                    
+                    // 步骤5: 遇到 Promise
+                    function() {
+                        logToConsole("Promise.resolve().then(...);");
+                        addTask(stackTasks, "Promise", "macrotask");
+                    },
+                    
+                    // 步骤6: Promise 处理完成，微任务入队
+                    function() {
+                        removeTask(stackTasks);
+                        // 微任务直接进入微任务队列（这里简化表示）
+                        logToConsole("// Promise 回调进入微任务队列");
+                    },
+                    
+                    // 步骤7: console.log('结束')
+                    function() {
+                        logToConsole("console.log('结束');");
+                        addTask(stackTasks, "console.log('结束')", "macrotask");
+                    },
+                    
+                    // 步骤8: console.log 执行完成
+                    function() {
+                        logToConsole("结束");
+                        removeTask(stackTasks);
+                    },
+                    
+                    // 步骤9: 主线程执行完成
+                    function() {
+                        removeTask(stackTasks);
+                        logToConsole("// 主线程执行完成，开始处理微任务队列");
+                    },
+                    
+                    // 步骤10: 执行微任务 (Promise 回调)
+                    function() {
+                        logToConsole("// 执行微任务: Promise 回调");
+                        addTask(stackTasks, "Promise.then", "microtask");
+                    },
+                    
+                    // 步骤11: Promise 回调执行
+                    function() {
+                        logToConsole("Promise 回调");
+                        removeTask(stackTasks);
+                    },
+                    
+                    // 步骤12: setTimeout 回调进入回调队列
+                    function() {
+                        removeTask(webapiTasks);
+                        addTask(callbackTasks, "setTimeout", "macrotask");
+                        logToConsole("// setTimeout 完成，回调进入回调队列");
+                    },
+                    
+                    // 步骤13: 从回调队列中取出任务执行
+                    function() {
+                        logToConsole("// 从回调队列中取出 setTimeout 回调");
+                        removeTask(callbackTasks);
+                        addTask(stackTasks, "setTimeout cb", "macrotask");
+                    },
+                    
+                    // 步骤14: setTimeout 回调执行
+                    function() {
+                        logToConsole("setTimeout 回调");
+                        removeTask(stackTasks);
+                    },
+                    
+                    // 步骤15: 完成
+                    function() {
+                        logToConsole("// 所有任务完成");
+                    }
+                ];
+            }
+            
+            function logToConsole(message) {
+                consoleOutput.innerHTML += message + "<br>";
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+            
+            function addTask(container, text, type) {
+                const task = document.createElement("div");
+                task.className = `task ${type}`;
+                task.textContent = text;
+                container.appendChild(task);
+            }
+            
+            function removeTask(container) {
+                if (container.lastElementChild) {
+                    container.removeChild(container.lastElementChild);
+                }
+            }
+            
+            function resetDemo() {
+                stackTasks.innerHTML = "<h3>调用栈</h3>";
+                webapiTasks.innerHTML = "<h3>Web APIs</h3>";
+                callbackTasks.innerHTML = "<h3>回调队列</h3>";
+                consoleOutput.innerHTML = "";
+                currentStep = 0;
+                initDemo();
+            }
+            
+            function runStep() {
+                if (currentStep < demoSteps.length) {
+                    demoSteps[currentStep]();
+                    currentStep++;
+                }
+            }
+            
+            function runFullDemo() {
+                resetDemo();
+                
+                function executeStep() {
+                    if (currentStep < demoSteps.length) {
+                        demoSteps[currentStep]();
+                        currentStep++;
+                        setTimeout(executeStep, 1000);
+                    }
+                }
+                
+                executeStep();
+            }
+            
+            // 初始化
+            initDemo();
+            
+            // 添加事件监听器
+            runButton.addEventListener('click', runFullDemo);
+            stepButton.addEventListener('click', runStep);
+            resetButton.addEventListener('click', resetDemo);
+        });
+    </script>
+</body>
+</html>
