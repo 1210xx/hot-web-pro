@@ -566,7 +566,7 @@
                 
                 if (response.ok) {
                     messageDiv.className = 'message success';
-                    messageDiv.textContent = `登录成功！欢迎回来，${data.user.name}`;
+                    messageDiv.textContent = `登录成功！欢迎回来，${data.user.username}`;
                     
                     localStorage.setItem('token', data.token);
                     document.getElementById('logout-btn').style.display = 'block';
